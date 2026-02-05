@@ -1,16 +1,11 @@
-import streamlit as st   
+import streamlit as st
 import pickle
 import re
 import spacy
-from spacy.cli import download
 
 @st.cache_resource
 def load_spacy_model():
-    try:
-        return spacy.load("en_core_web_sm")
-    except OSError:
-        download("en_core_web_sm")
-        return spacy.load("en_core_web_sm")
+    return spacy.load("en_core_web_sm")
 
 nlp = load_spacy_model()
 
@@ -78,5 +73,6 @@ if st.button("Analyze"):
     st.subheader("Result")
     st.write("Prediction:", "Fake News" if prediction == 1 else "Not Flagged as Fake")
     st.write("Confidence:", round(confidence, 2))
+
 
 
