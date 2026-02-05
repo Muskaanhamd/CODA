@@ -10,7 +10,6 @@ def load_spacy_model():
 nlp = load_spacy_model()
 
 
-
 # -------------------- Load Model --------------------
 with open("coda_model.pkl", "rb") as f:
     model = pickle.load(f)
@@ -73,6 +72,7 @@ if st.button("Analyze"):
     st.subheader("Result")
     st.write("Prediction:", "Fake News" if prediction == 1 else "Not Flagged as Fake")
     st.write("Confidence:", round(confidence, 2))
+
 
 
 
