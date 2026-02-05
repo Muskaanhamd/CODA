@@ -5,8 +5,13 @@ import pickle
 import re
 import spacy
 
-# -------------------- Load NLP --------------------
-nlp = spacy.load("en_core_web_sm")
+@st.cache_resource
+def load_spacy_model():
+    return spacy.load("en_core_web_sm")
+
+nlp = load_spacy_model()
+
+
 
 # -------------------- Load Model --------------------
 with open("coda_model.pkl", "rb") as f:
@@ -70,3 +75,4 @@ if st.button("Analyze"):
     st.subheader("Result")
     st.write("Prediction:", "Fake News" if prediction == 1 else "Not Flagged as Fake")
     st.write("Confidence:", round(confidence, 2))
+
