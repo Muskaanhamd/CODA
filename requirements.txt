@@ -1,5 +1,5 @@
 streamlit
 scikit-learn
-pandas
 numpy
-spacy
+pandas
+spacy==3.7.2
