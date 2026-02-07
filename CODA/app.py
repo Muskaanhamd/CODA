@@ -3,43 +3,49 @@ import pickle
 import time
 import os
 import requests
+import spacy
+import wikipedia
+import subprocess
 from dotenv import load_dotenv
 
-# --- NEW: 1. API Key Setup ---
-# This loads the variable from your .env file
+# --- 1. BOOTLOADER: Ensure spaCy is ready ---
+@st.cache_resource
+def load_nlp_resources():
+    model_name = "en_core_web_sm"
+    try:
+        return spacy.load(model_name)
+    except OSError:
+        subprocess.run(["python", "-m", "spacy", "download", model_name])
+        return spacy.load(model_name)
+
+nlp = load_nlp_resources()
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_FACT_CHECK_API_KEY")
 
-# --- NEW: 2. Fact Check Logic ---
+# --- 2. FACT-CHECKING ENGINE (Multi-Source) ---
 def get_fact_check_results(query):
-    # Professional Tip: Only search the first sentence to reduce noise
     clean_query = query.split('.')[0][:100].strip() 
     url = f"https://factchecktools.googleapis.com/v1alpha1/claims:search?query={clean_query}&key={GOOGLE_API_KEY}"
     
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            data = response.json()
-            all_claims = data.get("claims", [])
-            
-            # --- NEW: Relevance Filter ---
-            # We only show the result if the 'Claim' from Google 
-            # actually contains words from our query.
-            filtered_claims = []
+            all_claims = response.json().get("claims", [])
             query_words = set(clean_query.lower().split())
-            
-            for c in all_claims:
-                claim_text = c.get('text', '').lower()
-                # Check if at least 2 important words match
-                matches = len(query_words.intersection(set(claim_text.split())))
-                if matches >= 2: 
-                    filtered_claims.append(c)
-            
-            return filtered_claims
-    except Exception as e:
-        st.error(f"Fact-Check Error: {e}")
+            return [c for c in all_claims if len(query_words.intersection(set(c.get('text', '').lower().split()))) >= 2]
+    except Exception:
+        return []
     return []
-# --- 3. Existing Load "Brain" Section ---
+
+def get_wiki_verification(query):
+    try:
+        search_results = wikipedia.search(query)
+        if search_results:
+            return {"title": search_results[0], "summary": wikipedia.summary(search_results[0], sentences=1)}
+    except:
+        return None
+
+# --- 3. ML MODEL LOADING ---
 @st.cache_resource
 def load_coda_brain():
     model = pickle.load(open('coda_model.pkl', 'rb'))
@@ -48,63 +54,59 @@ def load_coda_brain():
 
 model, vectorizer = load_coda_brain()
 
-# --- 4. Page Setup ---
-st.set_page_config(page_title="CODA | Misinformation Intelligence", page_icon="🛡️")
-st.title("🛡️ CODA")
-st.subheader("Cross-Platform Misinformation Intelligence System")
+# --- 4. UI SETUP ---
+st.set_page_config(page_title="CODA | Misinformation Intelligence", page_icon="🛡️", layout="wide")
+st.title("🛡️ CODA: Project Intelligence Matrix")
 st.markdown("---")
 
-# --- 5. User Input ---
-user_input = st.text_area("Paste the news article or social media post below:", 
-                         placeholder="e.g., NASA confirms Earth will stop rotating...",
-                         height=200)
+user_input = st.text_area("Input Content for Verification:", placeholder="Paste text here...", height=150)
 
-if st.button("Analyze Content"):
-    if user_input.strip() == "":
-        st.warning("Please enter some text first!")
+if st.button("🚀 Run Deep Analysis"):
+    if not user_input.strip():
+        st.warning("Please enter text first.")
     else:
-        # Step A: Linguistic Analysis
-        with st.spinner("CODA is analyzing linguistic patterns..."):
-            time.sleep(1)
-            transformed_input = vectorizer.transform([user_input])
-            prediction = model.predict(transformed_input)
-            probability = model.predict_proba(transformed_input)[0][1]
+        # A. CLAIM SPOTTING (spaCy)
+        doc = nlp(user_input)
+        is_claim = len(doc.ents) > 0 and any(t.pos_ == "VERB" for t in doc)
+        
+        # B. LINGUISTIC ANALYSIS
+        transformed_input = vectorizer.transform([user_input])
+        prediction = model.predict(transformed_input)[0]
+        prob = model.predict_proba(transformed_input)[0][1]
 
-            st.markdown("### 📊 Intelligence Report")
-            col1, col2 = st.columns(2)
-            with col1:
-                if prediction[0] == 0:
-                    st.success("Verdict: Linguistically Neutral")
-                else:
-                    st.error("Verdict: Linguistically Suspicious")
-            with col2:
-                st.metric("Manipulation Score", f"{probability*100:.1f}%")
+        # DISPLAY RESULTS IN COLUMNS
+        st.markdown("### 📊 CODA Analysis Report")
+        col_ml, col_check, col_wiki = st.columns(3)
 
-        # --- NEW: Step B: Fact Verification Layer ---
-        st.markdown("---")
-        st.subheader("🔍 Fact Verification Layer")
-        with st.spinner("Searching trusted global fact-check databases..."):
-            # We search for the first 100 characters to find specific claims
-            fact_results = get_fact_check_results(user_input[:100])
-
-            if fact_results:
-                st.warning("Related Fact-Checks Found:")
-                for claim in fact_results[:2]: # Show only the top 2 matches
-                    claim_text = claim.get('text', 'No claim text')
-                    rating = claim['claimReview'][0].get('textualRating', 'Unknown')
-                    publisher = claim['claimReview'][0]['publisher'].get('name', 'Source')
-                    
-                    st.write(f"**Claim:** {claim_text}")
-                    st.write(f"**Verdict:** {rating} (Source: {publisher})")
+        with col_ml:
+            st.write("**Linguistic Layer**")
+            if prediction == 0:
+                st.success("Verdict: Neutral")
             else:
-                st.success("No previous fact-checks found for this claim.")
+                st.error("Verdict: Suspicious")
+            st.metric("Manipulation Score", f"{prob*100:.1f}%")
 
-        # --- Explainability Section ---
-        st.info("**Why this result?**")
-        if prediction[0] == 1:
-            st.write("The model detected patterns common in sensationalist reporting.")
+        with col_check:
+            st.write("**Fact-Check Layer**")
+            fact_results = get_fact_check_results(user_input)
+            if fact_results:
+                st.warning(f"Found {len(fact_results)} Debunks")
+                st.caption(f"Rating: {fact_results[0]['claimReview'][0]['textualRating']}")
+            else:
+                st.success("No active debunks found.")
+
+        with col_wiki:
+            st.write("**Knowledge Graph (Wiki)**")
+            wiki = get_wiki_verification(user_input)
+            if wiki:
+                st.info(f"Context: {wiki['title']}")
+                st.caption(wiki['summary'])
+            else:
+                st.write("No matching entries.")
+
+        # FINAL EXPLAINABILITY
+        st.markdown("---")
+        if is_claim:
+            st.write("🎯 **CODA Insight:** This statement contains specific entities and actions, making it a high-priority factual claim.")
         else:
-            st.write("The language follows standard informative reporting patterns.")
-
-st.markdown("---")
-st.caption("CODA System v1.0 | Project for PS-1.4")
+            st.write("ℹ️ **CODA Insight:** This text appears to be an opinion or subjective statement.")
