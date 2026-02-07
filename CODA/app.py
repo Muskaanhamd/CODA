@@ -110,3 +110,7 @@ if st.button("🚀 Run Deep Analysis"):
             st.write("🎯 **CODA Insight:** This statement contains specific entities and actions, making it a high-priority factual claim.")
         else:
             st.write("ℹ️ **CODA Insight:** This text appears to be an opinion or subjective statement.")
+        with st.expander("🛠️ Technical System Logs"):
+    st.write(f"NLP Engine: spaCy {spacy.__version__}")
+    st.write(f"Model State: Brain Loaded (coda_model.pkl)")
+    st.write(f"Sources Queried: Google API, Wikipedia, Local Linguistic Model")
