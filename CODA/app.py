@@ -12,24 +12,33 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_FACT_CHECK_API_KEY")
 
 # --- NEW: 2. Fact Check Logic ---
 def get_fact_check_results(query):
-    # TWEAK 1: Only take the first sentence or the first 50 characters. 
-    # Long sentences confuse the Fact-Check API.
-    clean_query = query.split('.')[0][:50].strip() 
-    
-    # TWEAK 2: We use the 'query' parameter specifically.
+    # Professional Tip: Only search the first sentence to reduce noise
+    clean_query = query.split('.')[0][:100].strip() 
     url = f"https://factchecktools.googleapis.com/v1alpha1/claims:search?query={clean_query}&key={GOOGLE_API_KEY}"
     
     try:
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            # We filter: Only show results if the claim actually mentions our keywords
             all_claims = data.get("claims", [])
-            return all_claims
+            
+            # --- NEW: Relevance Filter ---
+            # We only show the result if the 'Claim' from Google 
+            # actually contains words from our query.
+            filtered_claims = []
+            query_words = set(clean_query.lower().split())
+            
+            for c in all_claims:
+                claim_text = c.get('text', '').lower()
+                # Check if at least 2 important words match
+                matches = len(query_words.intersection(set(claim_text.split())))
+                if matches >= 2: 
+                    filtered_claims.append(c)
+            
+            return filtered_claims
     except Exception as e:
         st.error(f"Fact-Check Error: {e}")
     return []
-
 # --- 3. Existing Load "Brain" Section ---
 @st.cache_resource
 def load_coda_brain():
