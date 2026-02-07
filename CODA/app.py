@@ -55,13 +55,13 @@ def load_coda_brain():
 model, vectorizer = load_coda_brain()
 
 # --- 4. UI SETUP ---
-st.set_page_config(page_title="CODA | Misinformation Intelligence", page_icon="🛡️", layout="wide")
-st.title("🛡️ CODA: Project Intelligence Matrix")
+st.set_page_config(page_title="CODA | Misinformation Intelligence", page_icon="➰", layout="wide")
+st.title(" CODA: Project Intelligence Matrix")
 st.markdown("---")
 
 user_input = st.text_area("Input Content for Verification:", placeholder="Paste text here...", height=150)
 
-if st.button("🚀 Run Deep Analysis"):
+if st.button(" Run Deep Analysis"):
     if not user_input.strip():
         st.warning("Please enter text first.")
     else:
@@ -75,7 +75,7 @@ if st.button("🚀 Run Deep Analysis"):
         prob = model.predict_proba(transformed_input)[0][1]
 
         # DISPLAY RESULTS IN COLUMNS
-        st.markdown("### 📊 CODA Analysis Report")
+        st.markdown("###  CODA Analysis Report")
         col_ml, col_check, col_wiki = st.columns(3)
 
         with col_ml:
@@ -109,12 +109,12 @@ if st.button("🚀 Run Deep Analysis"):
         # FINAL EXPLAINABILITY
         st.markdown("---")
         if is_claim:
-            st.write("🎯 **CODA Insight:** This statement contains specific entities and actions, making it a high-priority factual claim.")
+            st.write(" **CODA Insight:** This statement contains specific entities and actions, making it a high-priority factual claim.")
         else:
-            st.write("ℹ️ **CODA Insight:** This text appears to be an opinion or subjective statement.")
+            st.write("ℹ **CODA Insight:** This text appears to be an opinion or subjective statement.")
 
         # MOVED INSIDE THE BUTTON BLOCK:
-        with st.expander("🛠️ Technical System Logs"):
+        with st.expander(" Technical System Logs"):
             st.write(f"NLP Engine: spaCy {spacy.__version__}")
             st.write(f"Model State: Brain Loaded (coda_model.pkl)")
             st.write(f"Sources Queried: Google API, Wikipedia, Local Linguistic Model")
