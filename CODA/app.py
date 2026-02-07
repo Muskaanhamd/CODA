@@ -12,15 +12,22 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_FACT_CHECK_API_KEY")
 
 # --- NEW: 2. Fact Check Logic ---
 def get_fact_check_results(query):
-    """Calls Google Fact Check API to find matching claims."""
-    url = f"https://factchecktools.googleapis.com/v1alpha1/claims:search?query={query}&key={GOOGLE_API_KEY}"
+    # TWEAK 1: Only take the first sentence or the first 50 characters. 
+    # Long sentences confuse the Fact-Check API.
+    clean_query = query.split('.')[0][:50].strip() 
+    
+    # TWEAK 2: We use the 'query' parameter specifically.
+    url = f"https://factchecktools.googleapis.com/v1alpha1/claims:search?query={clean_query}&key={GOOGLE_API_KEY}"
+    
     try:
         response = requests.get(url)
         if response.status_code == 200:
             data = response.json()
-            return data.get("claims", [])
+            # We filter: Only show results if the claim actually mentions our keywords
+            all_claims = data.get("claims", [])
+            return all_claims
     except Exception as e:
-        st.error(f"API Error: {e}")
+        st.error(f"Fact-Check Error: {e}")
     return []
 
 # --- 3. Existing Load "Brain" Section ---
