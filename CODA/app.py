@@ -104,13 +104,21 @@ if st.button("🚀 Run Deep Analysis"):
             else:
                 st.write("No matching entries.")
 
+        # ... (rest of your analysis logic above)
+
         # FINAL EXPLAINABILITY
         st.markdown("---")
         if is_claim:
             st.write("🎯 **CODA Insight:** This statement contains specific entities and actions, making it a high-priority factual claim.")
         else:
             st.write("ℹ️ **CODA Insight:** This text appears to be an opinion or subjective statement.")
+
+        # MOVED INSIDE THE BUTTON BLOCK:
         with st.expander("🛠️ Technical System Logs"):
-    st.write(f"NLP Engine: spaCy {spacy.__version__}")
-    st.write(f"Model State: Brain Loaded (coda_model.pkl)")
-    st.write(f"Sources Queried: Google API, Wikipedia, Local Linguistic Model")
+            st.write(f"NLP Engine: spaCy {spacy.__version__}")
+            st.write(f"Model State: Brain Loaded (coda_model.pkl)")
+            st.write(f"Sources Queried: Google API, Wikipedia, Local Linguistic Model")
+            st.write(f"Current Date/Time: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+
+st.markdown("---")
+st.caption("CODA System v1.0 | Project for PS-1.4")
