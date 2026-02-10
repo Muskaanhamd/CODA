@@ -10,29 +10,49 @@ from dotenv import load_dotenv
 # --- 1. SETUP & CONFIG ---
 load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_FACT_CHECK_API_KEY")
-NEWS_API_KEY = os.getenv("NEWS_API_KEY") # Ensure this is in your .env file
+NEWS_API_KEY = os.getenv("NEWS_API_KEY") 
 
 # --- 2. THE ENGINES ---
 
+def is_valid_news_claim(text):
+    """
+    Gatekeeper: Blocks personal chat, names, and short non-news sentences.
+    Returns (is_valid, error_message)
+    """
+    words = text.strip().split()
+    
+    # Check 1: Length (News claims need context, usually > 5 words)
+    if len(words) < 6:
+        return False, "Input is too short. Please provide a full news headline or claim."
+
+    # Check 2: Personal Pronouns (Reject 'I am', 'My name', etc.)
+    personal_triggers = {"i", "me", "my", "mine", "i'm", "am", "hello", "hi"}
+    first_few_words = [w.lower().replace("'", "") for w in words[:3]]
+    if any(p in first_few_words for p in personal_triggers):
+        return False, "CODA is for news verification, not personal statements or chat."
+
+    # Check 3: Entity Density (News must mention people, places, or orgs)
+    # We look for capitalized words that aren't the very first word.
+    entities = [w for w in words[1:] if w[0].isupper() and len(w) > 1]
+    if len(entities) < 1:
+        return False, "This looks like a general statement. News claims usually involve specific names or entities."
+
+    return True, ""
+
 def extract_precise_keywords(text):
     """Strips fluff to find the 'Subject' and 'Object' of the news."""
-    # List of words that add zero value to a search query
-    fluff = {"denies", "links", "official", "statement", "report", "claims", "says", "verified"}
-    # Find capitalized words (Entities)
+    fluff = {"denies", "links", "official", "statement", "report", "claims", "says", "verified", "news"}
     entities = re.findall(r'\b[A-Z][a-z]+\b', text)
-    # Filter out common names or fluff words
     filtered = [e for e in entities if e.lower() not in fluff]
     
     if len(filtered) >= 2:
-        return f'"{filtered[0]} {filtered[1]}"' # Return as a combined entity search
+        return f'"{filtered[0]} {filtered[1]}"'
     return filtered[0] if filtered else text[:50]
 
 def get_live_news(query):
     """Queries NewsAPI for real-time reporting from trusted domains."""
-    # We restrict to top-tier domains to avoid 'echo chamber' fake news
     trusted_sources = "reuters.com,apnews.com,bbc.co.uk,nytimes.com,wsj.com,theguardian.com"
     url = f"https://newsapi.org/v2/everything?q={query}&domains={trusted_sources}&apiKey={NEWS_API_KEY}&pageSize=3"
-    
     try:
         response = requests.get(url)
         if response.status_code == 200:
@@ -42,9 +62,8 @@ def get_live_news(query):
     return []
 
 def get_wiki_context(text):
-    """Uses Wikipedia only for background info on the primary entity mentioned."""
+    """Uses Wikipedia for background info on the primary entity."""
     try:
-        # Extract the first Proper Noun as the subject
         subject = re.findall(r'\b[A-Z][a-z]+\b', text)
         if subject:
             search_results = wikipedia.search(subject[0])
@@ -84,28 +103,33 @@ st.markdown("---")
 if 'analysis_done' not in st.session_state:
     st.session_state.analysis_done = False
 
-user_input = st.text_area("Input Content for Verification:", placeholder="Paste text here...", height=150)
+user_input = st.text_area("Input News Content for Verification:", placeholder="Paste news headline or article snippet here...", height=150)
 
 # --- 5. EXECUTION LOGIC ---
 if st.button("🚀 Run Deep Analysis"):
     if not user_input.strip():
         st.warning("Please enter text first.")
     else:
-        with st.spinner("CODA is cross-referencing multi-layer intelligence..."):
-            # A. Precision Keyword Extraction
-            refined_query = extract_precise_keywords(user_input)
-            
-            # B. Linguistic Analysis (ML Model)
-            transformed_input = vectorizer.transform([user_input])
-            st.session_state.prediction = model.predict(transformed_input)[0]
-            st.session_state.prob = model.predict_proba(transformed_input)[0][1]
-            
-            # C. Real-Time Verification (News + Fact Check)
-            st.session_state.news = get_live_news(refined_query)
-            st.session_state.fact_results = get_fact_check_results(refined_query)
-            st.session_state.wiki = get_wiki_context(user_input)
-            
-            st.session_state.analysis_done = True
+        # --- GATEKEEPER CHECK ---
+        is_valid, error_msg = is_valid_news_claim(user_input)
+        
+        if not is_valid:
+            st.error(f"🚫 {error_msg}")
+            st.session_state.analysis_done = False
+        else:
+            with st.spinner("CODA is cross-referencing multi-layer intelligence..."):
+                refined_query = extract_precise_keywords(user_input)
+                
+                # Linguistic Analysis
+                transformed_input = vectorizer.transform([user_input])
+                st.session_state.prediction = model.predict(transformed_input)[0]
+                st.session_state.prob = model.predict_proba(transformed_input)[0][1]
+                
+                # Real-Time Verification
+                st.session_state.news = get_live_news(refined_query)
+                st.session_state.fact_results = get_fact_check_results(refined_query)
+                st.session_state.wiki = get_wiki_context(user_input)
+                st.session_state.analysis_done = True
 
 # --- 6. DISPLAY RESULTS ---
 if st.session_state.analysis_done:
@@ -134,10 +158,9 @@ if st.session_state.analysis_done:
             st.info(f"Subject: {st.session_state.wiki['title']}")
             st.caption(st.session_state.wiki['summary'])
         else:
-            st.write("No matching background context.")
+            st.write("No matching background context found.")
 
     st.markdown("---")
-    # Fact Check Results (Google API)
     if st.session_state.fact_results:
         with st.expander("🔍 Specific Fact-Check Database Matches"):
             for claim in st.session_state.fact_results[:2]:
@@ -149,4 +172,4 @@ if st.session_state.analysis_done:
         st.write(f"Refined Search Query: {extract_precise_keywords(user_input)}")
 
 st.markdown("---")
-st.caption("CODA System v1.1 | Developed for Project PS-1.4")
+st.caption("CODA System v1.2 | Developed for Project PS-1.4")
