@@ -12,57 +12,71 @@ load_dotenv()
 GOOGLE_API_KEY = os.getenv("GOOGLE_FACT_CHECK_API_KEY")
 NEWS_API_KEY = os.getenv("NEWS_API_KEY") 
 
+# Expanded Global Trust Matrix
+TRUSTED_DOMAINS = [
+    "reuters.com", "apnews.com", "afp.com", "bbc.co.uk", "nytimes.com", 
+    "wsj.com", "theguardian.com", "bloomberg.com", "aljazeera.com", 
+    "scmp.com", "timesofindia.indiatimes.com", "ndtv.com", "snopes.com", 
+    "politifact.com", "factcheck.org", "fullfact.org"
+]
+
 # --- 2. THE ENGINES ---
 
 def is_valid_news_claim(text):
-    """
-    Gatekeeper: Blocks personal chat, names, and short non-news sentences.
-    Returns (is_valid, error_message)
-    """
+    """Gatekeeper: Blocks personal chat and fluff."""
     words = text.strip().split()
-    
-    # Check 1: Length (News claims need context, usually > 5 words)
     if len(words) < 6:
-        return False, "Input is too short. Please provide a full news headline or claim."
-
-    # Check 2: Personal Pronouns (Reject 'I am', 'My name', etc.)
+        return False, "Input too short for analysis."
+    
     personal_triggers = {"i", "me", "my", "mine", "i'm", "am", "hello", "hi"}
-    first_few_words = [w.lower().replace("'", "") for w in words[:3]]
-    if any(p in first_few_words for p in personal_triggers):
-        return False, "CODA is for news verification, not personal statements or chat."
+    if any(p in [w.lower().replace("'", "") for w in words[:3]] for p in personal_triggers):
+        return False, "CODA detected a personal statement. Please provide a news claim."
 
-    # Check 3: Entity Density (News must mention people, places, or orgs)
-    # We look for capitalized words that aren't the very first word.
     entities = [w for w in words[1:] if w[0].isupper() and len(w) > 1]
-    if len(entities) < 1:
-        return False, "This looks like a general statement. News claims usually involve specific names or entities."
+    if not entities:
+        return False, "No specific entities (names/places) detected. Try a more specific headline."
 
     return True, ""
 
 def extract_precise_keywords(text):
     """Strips fluff to find the 'Subject' and 'Object' of the news."""
-    fluff = {"denies", "links", "official", "statement", "report", "claims", "says", "verified", "news"}
     entities = re.findall(r'\b[A-Z][a-z]+\b', text)
-    filtered = [e for e in entities if e.lower() not in fluff]
-    
-    if len(filtered) >= 2:
-        return f'"{filtered[0]} {filtered[1]}"'
-    return filtered[0] if filtered else text[:50]
+    if len(entities) >= 2:
+        return f'"{entities[0]} {entities[1]}"'
+    return entities[0] if entities else text[:50]
 
-def get_live_news(query):
-    """Queries NewsAPI for real-time reporting from trusted domains."""
-    trusted_sources = "reuters.com,apnews.com,bbc.co.uk,nytimes.com,wsj.com,theguardian.com"
-    url = f"https://newsapi.org/v2/everything?q={query}&domains={trusted_sources}&apiKey={NEWS_API_KEY}&pageSize=3"
+def get_live_news_with_verdict(query):
+    """Queries NewsAPI and calculates a consensus verdict."""
+    domain_str = ",".join(TRUSTED_DOMAINS)
+    url = f"https://newsapi.org/v2/everything?q={query}&domains={domain_str}&apiKey={NEWS_API_KEY}&pageSize=10"
+    
     try:
         response = requests.get(url)
         if response.status_code == 200:
-            return response.json().get("articles", [])
+            articles = response.json().get("articles", [])
+            
+            # Domain Consensus Logic
+            found_domains = set()
+            for art in articles:
+                url_lower = art['url'].lower()
+                for d in TRUSTED_DOMAINS:
+                    if d in url_lower:
+                        found_domains.add(d)
+            
+            count = len(found_domains)
+            if count >= 3:
+                verdict = ("Verified Fact", "Green", f"Confirmed by {count} major outlets.")
+            elif count >= 1:
+                verdict = ("Uncertain", "Orange", f"Reported by {count} source(s). Verify further.")
+            else:
+                verdict = ("High Risk", "Red", "No matches found in trusted news matrix.")
+                
+            return articles, (verdict, list(found_domains))
     except:
-        return []
-    return []
+        pass
+    return [], (("Error", "Grey", "API connection failed"), [])
 
 def get_wiki_context(text):
-    """Uses Wikipedia for background info on the primary entity."""
     try:
         subject = re.findall(r'\b[A-Z][a-z]+\b', text)
         if subject:
@@ -76,14 +90,14 @@ def get_wiki_context(text):
 def get_fact_check_results(query):
     url = f"https://factchecktools.googleapis.com/v1alpha1/claims:search?query={query}&key={GOOGLE_API_KEY}"
     try:
-        response = requests.get(url)
-        if response.status_code == 200:
-            return response.json().get("claims", [])
+        res = requests.get(url)
+        if res.status_code == 200:
+            return res.json().get("claims", [])
     except:
         return []
     return []
 
-# --- 3. ML MODEL LOADING ---
+# --- 3. ML MODEL ---
 @st.cache_resource
 def load_coda_brain():
     try:
@@ -95,81 +109,76 @@ def load_coda_brain():
 
 model, vectorizer = load_coda_brain()
 
-# --- 4. UI SETUP ---
+# --- 4. UI ---
 st.set_page_config(page_title="CODA | Intelligence Matrix", page_icon="🌀", layout="wide")
-st.title("CODA: Intelligence Matrix")
+st.title("🌀 CODA: Intelligence Matrix")
 st.markdown("---")
 
-if 'analysis_done' not in st.session_state:
-    st.session_state.analysis_done = False
+user_input = st.text_area("Verification Input:", placeholder="Paste headline here...", height=100)
 
-user_input = st.text_area("Input News Content for Verification:", placeholder="Paste news headline or article snippet here...", height=150)
-
-# --- 5. EXECUTION LOGIC ---
 if st.button("Run Deep Analysis"):
     if not user_input.strip():
-        st.warning("Please enter text first.")
+        st.warning("Input required.")
     else:
-        # --- GATEKEEPER CHECK ---
         is_valid, error_msg = is_valid_news_claim(user_input)
-        
         if not is_valid:
-            st.error(f"{error_msg}")
-            st.session_state.analysis_done = False
+            st.error(error_msg)
         else:
-            with st.spinner("CODA is cross-referencing multi-layer intelligence..."):
+            with st.spinner("Analyzing multi-layer intelligence..."):
                 refined_query = extract_precise_keywords(user_input)
                 
-                # Linguistic Analysis
-                transformed_input = vectorizer.transform([user_input])
-                st.session_state.prediction = model.predict(transformed_input)[0]
-                st.session_state.prob = model.predict_proba(transformed_input)[0][1]
+                # Layer 1: ML
+                transformed = vectorizer.transform([user_input])
+                st.session_state.ml_res = (model.predict(transformed)[0], model.predict_proba(transformed)[0][1])
                 
-                # Real-Time Verification
-                st.session_state.news = get_live_news(refined_query)
+                # Layer 2: Live News & Consensus
+                st.session_state.news_data = get_live_news_with_verdict(refined_query)
+                
+                # Layer 3: Context
                 st.session_state.fact_results = get_fact_check_results(refined_query)
                 st.session_state.wiki = get_wiki_context(user_input)
                 st.session_state.analysis_done = True
 
-# --- 6. DISPLAY RESULTS ---
-if st.session_state.analysis_done:
-    st.markdown("CODA Intelligence Report")
+# --- 5. DISPLAY RESULTS ---
+if st.session_state.get('analysis_done'):
     col_ml, col_news, col_wiki = st.columns(3)
 
     with col_ml:
-        st.subheader("Linguistic Layer")
-        status = "Suspicious" if st.session_state.prediction == 1 else "Neutral"
-        if status == "Neutral": st.success(f"Verdict: {status}")
-        else: st.error(f"Verdict: {status}")
-        st.metric("Manipulation Score", f"{st.session_state.prob*100:.1f}%")
+        st.subheader("🛡️ Linguistic Layer")
+        pred, prob = st.session_state.ml_res
+        if pred == 0: st.success("Verdict: Neutral")
+        else: st.error("Verdict: Suspicious")
+        st.metric("Manipulation Score", f"{prob*100:.1f}%")
 
     with col_news:
-        st.subheader("Live News Layer")
-        if st.session_state.news:
-            for art in st.session_state.news:
-                st.write(f"{art['source']['name']}: {art['title'][:70]}...")
-                st.caption(f"[Read Article]({art['url']})")
-        else:
-            st.warning("No coverage found in trusted news outlets. High risk of fabricated claim.")
+        st.subheader("📰 Consensus Layer")
+        articles, (verdict, found_sources) = st.session_state.news_data
+        status, color, detail = verdict
+        
+        if color == "Green": st.success(f"**{status}**")
+        elif color == "Orange": st.warning(f"**{status}**")
+        else: st.error(f"**{status}**")
+        
+        st.caption(detail)
+        for art in articles[:2]:
+            st.markdown(f"**{art['source']['name']}**: [{art['title'][:50]}...]({art['url']})")
 
     with col_wiki:
-        st.subheader("Knowledge Graph")
+        st.subheader("📚 Context Layer")
         if st.session_state.wiki:
-            st.info(f"Subject: {st.session_state.wiki['title']}")
+            st.info(f"**{st.session_state.wiki['title']}**")
             st.caption(st.session_state.wiki['summary'])
         else:
-            st.write("No matching background context found.")
+            st.write("No historical data found.")
 
+    # --- EXPANDERS ---
     st.markdown("---")
     if st.session_state.fact_results:
-        with st.expander("🔍 Specific Fact-Check Database Matches"):
+        with st.expander("🔍 Fact-Check Database Hits"):
             for claim in st.session_state.fact_results[:2]:
-                st.write(f"**Claim:** {claim['text']}")
-                st.write(f"**Verdict:** {claim['claimReview'][0]['textualRating']}")
+                st.write(f"**Claim:** {claim['text']} \n**Verdict:** {claim['claimReview'][0]['textualRating']}")
 
-    with st.expander("Technical System Logs"):
-        st.write(f"System State: Active")
-        st.write(f"Refined Search Query: {extract_precise_keywords(user_input)}")
-
-st.markdown("---")
-st.caption("CODA System v1.2 | Developed for Project PS-1.4")
+    with st.expander("🛠️ Technical Logs"):
+        st.write(f"Refined Query: `{extract_precise_keywords(user_input)}`")
+        st.write(f"Trusted Domains Checked: {len(TRUSTED_DOMAINS)}")
+        st.write(f"Identified Sources: {', '.join(found_sources) if found_sources else 'None'}")
