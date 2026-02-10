@@ -5,6 +5,7 @@ import os
 import requests
 import wikipedia
 import re
+import pandas as pd
 from dotenv import load_dotenv
 
 # --- 1. SETUP & CONFIG ---
@@ -21,6 +22,20 @@ TRUSTED_DOMAINS = [
 ]
 
 # --- 2. THE ENGINES ---
+
+def save_user_feedback(input_text, coda_verdict, user_vote, sources_found):
+    """Logs user feedback to a CSV file for the Admin Dashboard."""
+    feedback_label = "Correct" if user_vote == 1 else "Incorrect"
+    new_data = {
+        "timestamp": [time.ctime()],
+        "input_text": [input_text],
+        "coda_verdict": [coda_verdict],
+        "user_feedback": [feedback_label],
+        "sources": [", ".join(sources_found) if sources_found else "None"]
+    }
+    df = pd.DataFrame(new_data)
+    # Append to CSV; create with header if file doesn't exist
+    df.to_csv("coda_feedback_log.csv", mode='a', index=False, header=not os.path.exists("coda_feedback_log.csv"))
 
 def is_valid_news_claim(text):
     """Gatekeeper: Blocks personal chat and fluff."""
@@ -171,6 +186,22 @@ if st.session_state.get('analysis_done'):
         else:
             st.write("No historical data found.")
 
+    # --- FEEDBACK COLLECTOR ---
+    st.markdown("---")
+    st.subheader("📝 Help CODA Learn")
+    st.write("Does this intelligence report seem accurate to you?")
+    
+    # options="thumbs" returns 0 for down, 1 for up
+    user_sentiment = st.feedback("thumbs")
+    
+    if user_sentiment is not None:
+        # Extract current status from the consensus layer
+        current_status = st.session_state.news_data[1][0][0]
+        found_sources = st.session_state.news_data[1][1]
+        
+        save_user_feedback(user_input, current_status, user_sentiment, found_sources)
+        st.toast("Thank you! Feedback logged in the Intelligence Matrix.", icon="🧠")
+
     # --- EXPANDERS ---
     st.markdown("---")
     if st.session_state.fact_results:
@@ -181,4 +212,7 @@ if st.session_state.get('analysis_done'):
     with st.expander("🛠️ Technical Logs"):
         st.write(f"Refined Query: `{extract_precise_keywords(user_input)}`")
         st.write(f"Trusted Domains Checked: {len(TRUSTED_DOMAINS)}")
-        st.write(f"Identified Sources: {', '.join(found_sources) if found_sources else 'None'}")
+        st.write(f"Identified Sources: {', '.join(st.session_state.news_data[1][1]) if st.session_state.news_data[1][1] else 'None'}")
+
+st.markdown("---")
+st.caption("CODA System v1.3 | Developed for Project PS-1.4")
