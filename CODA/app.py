@@ -97,7 +97,7 @@ model, vectorizer = load_coda_brain()
 
 # --- 4. UI SETUP ---
 st.set_page_config(page_title="CODA | Intelligence Matrix", page_icon="🌀", layout="wide")
-st.title("🛡️ CODA: Project Intelligence Matrix")
+st.title("CODA: Intelligence Matrix")
 st.markdown("---")
 
 if 'analysis_done' not in st.session_state:
@@ -106,7 +106,7 @@ if 'analysis_done' not in st.session_state:
 user_input = st.text_area("Input News Content for Verification:", placeholder="Paste news headline or article snippet here...", height=150)
 
 # --- 5. EXECUTION LOGIC ---
-if st.button("🚀 Run Deep Analysis"):
+if st.button("Run Deep Analysis"):
     if not user_input.strip():
         st.warning("Please enter text first.")
     else:
@@ -114,7 +114,7 @@ if st.button("🚀 Run Deep Analysis"):
         is_valid, error_msg = is_valid_news_claim(user_input)
         
         if not is_valid:
-            st.error(f"🚫 {error_msg}")
+            st.error(f"{error_msg}")
             st.session_state.analysis_done = False
         else:
             with st.spinner("CODA is cross-referencing multi-layer intelligence..."):
@@ -133,27 +133,27 @@ if st.button("🚀 Run Deep Analysis"):
 
 # --- 6. DISPLAY RESULTS ---
 if st.session_state.analysis_done:
-    st.markdown("### 📊 CODA Intelligence Report")
+    st.markdown("CODA Intelligence Report")
     col_ml, col_news, col_wiki = st.columns(3)
 
     with col_ml:
-        st.subheader("🧠 Linguistic Layer")
+        st.subheader("Linguistic Layer")
         status = "Suspicious" if st.session_state.prediction == 1 else "Neutral"
         if status == "Neutral": st.success(f"Verdict: {status}")
         else: st.error(f"Verdict: {status}")
         st.metric("Manipulation Score", f"{st.session_state.prob*100:.1f}%")
 
     with col_news:
-        st.subheader("📰 Live News Layer")
+        st.subheader("Live News Layer")
         if st.session_state.news:
             for art in st.session_state.news:
-                st.write(f"✅ **{art['source']['name']}**: {art['title'][:70]}...")
+                st.write(f"{art['source']['name']}: {art['title'][:70]}...")
                 st.caption(f"[Read Article]({art['url']})")
         else:
             st.warning("No coverage found in trusted news outlets. High risk of fabricated claim.")
 
     with col_wiki:
-        st.subheader("📚 Knowledge Graph")
+        st.subheader("Knowledge Graph")
         if st.session_state.wiki:
             st.info(f"Subject: {st.session_state.wiki['title']}")
             st.caption(st.session_state.wiki['summary'])
@@ -167,8 +167,8 @@ if st.session_state.analysis_done:
                 st.write(f"**Claim:** {claim['text']}")
                 st.write(f"**Verdict:** {claim['claimReview'][0]['textualRating']}")
 
-    with st.expander("🛠️ Technical System Logs"):
-        st.write(f"System State: 🟢 Active")
+    with st.expander("Technical System Logs"):
+        st.write(f"System State: Active")
         st.write(f"Refined Search Query: {extract_precise_keywords(user_input)}")
 
 st.markdown("---")
