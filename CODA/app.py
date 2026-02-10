@@ -126,7 +126,7 @@ model, vectorizer = load_coda_brain()
 
 # --- 4. UI ---
 st.set_page_config(page_title="CODA | Intelligence Matrix", page_icon="🌀", layout="wide")
-st.title("🌀 CODA: Intelligence Matrix")
+st.title("CODA: Intelligence Matrix")
 st.markdown("---")
 
 user_input = st.text_area("Verification Input:", placeholder="Paste headline here...", height=100)
@@ -159,36 +159,36 @@ if st.session_state.get('analysis_done'):
     col_ml, col_news, col_wiki = st.columns(3)
 
     with col_ml:
-        st.subheader("🛡️ Linguistic Layer")
+        st.subheader("Linguistic Layer")
         pred, prob = st.session_state.ml_res
         if pred == 0: st.success("Verdict: Neutral")
         else: st.error("Verdict: Suspicious")
         st.metric("Manipulation Score", f"{prob*100:.1f}%")
 
     with col_news:
-        st.subheader("📰 Consensus Layer")
+        st.subheader("Consensus Layer")
         articles, (verdict, found_sources) = st.session_state.news_data
         status, color, detail = verdict
         
-        if color == "Green": st.success(f"**{status}**")
-        elif color == "Orange": st.warning(f"**{status}**")
-        else: st.error(f"**{status}**")
+        if color == "Green": st.success(f"{status}")
+        elif color == "Orange": st.warning(f"{status}")
+        else: st.error(f"{status}")
         
         st.caption(detail)
         for art in articles[:2]:
-            st.markdown(f"**{art['source']['name']}**: [{art['title'][:50]}...]({art['url']})")
+            st.markdown(f"{art['source']['name']}: [{art['title'][:50]}...]({art['url']})")
 
     with col_wiki:
-        st.subheader("📚 Context Layer")
+        st.subheader("Context Layer")
         if st.session_state.wiki:
-            st.info(f"**{st.session_state.wiki['title']}**")
+            st.info(f"{st.session_state.wiki['title']}")
             st.caption(st.session_state.wiki['summary'])
         else:
             st.write("No historical data found.")
 
     # --- FEEDBACK COLLECTOR ---
     st.markdown("---")
-    st.subheader("📝 Help CODA Learn")
+    st.subheader("Help CODA Learn")
     st.write("Does this intelligence report seem accurate to you?")
     
     # options="thumbs" returns 0 for down, 1 for up
@@ -200,16 +200,16 @@ if st.session_state.get('analysis_done'):
         found_sources = st.session_state.news_data[1][1]
         
         save_user_feedback(user_input, current_status, user_sentiment, found_sources)
-        st.toast("Thank you! Feedback logged in the Intelligence Matrix.", icon="🧠")
+        st.toast("Thank you! Feedback logged in the Intelligence Matrix.")
 
     # --- EXPANDERS ---
     st.markdown("---")
     if st.session_state.fact_results:
-        with st.expander("🔍 Fact-Check Database Hits"):
+        with st.expander("Fact-Check Database Hits"):
             for claim in st.session_state.fact_results[:2]:
-                st.write(f"**Claim:** {claim['text']} \n**Verdict:** {claim['claimReview'][0]['textualRating']}")
+                st.write(f"Claim: {claim['text']} \nVerdict: {claim['claimReview'][0]['textualRating']}")
 
-    with st.expander("🛠️ Technical Logs"):
+    with st.expander("Technical Logs"):
         st.write(f"Refined Query: `{extract_precise_keywords(user_input)}`")
         st.write(f"Trusted Domains Checked: {len(TRUSTED_DOMAINS)}")
         st.write(f"Identified Sources: {', '.join(st.session_state.news_data[1][1]) if st.session_state.news_data[1][1] else 'None'}")
