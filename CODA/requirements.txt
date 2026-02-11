@@ -1,5 +1,0 @@
-streamlit
-requests
-wikipedia
-python-dotenv
-scikit-learn

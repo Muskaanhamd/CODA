@@ -1,0 +1,9 @@
+streamlit
+requests
+wikipedia
+python-dotenv
+scikit-learn
+pandas
+google-api-python-client
+matplotlib
+pillow
