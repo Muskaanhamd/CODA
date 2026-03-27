@@ -1,48 +1,188 @@
 # CODA
 
-CODA is a content verification engine designed to help users evaluate the credibility of digital information shared through links or online sources.
+### An Explainable AI Framework for Detecting Psychological Manipulation in Digital News
 
-The idea behind CODA is to address a growing problem in the digital space — misleading, emotionally manipulative, or unverified content that spreads quickly without context. By combining natural language processing with source-based verification, CODA aims to offer a more informed way to examine online content before trusting or sharing it.
+![Python](https://img.shields.io/badge/Python-Backend-blue)
+![Flask](https://img.shields.io/badge/Flask-WebFramework-black)
+![NLP](https://img.shields.io/badge/NLP-ExplainableAI-green)
+
+CODA is an AI-powered verification framework designed to examine digital news not only for factual credibility, but also for psychological influence embedded within language.
+
+In digital spaces, misinformation often spreads not because every fact is false, but because language is intentionally structured to trigger urgency, fear, outrage, or emotional reaction before critical thinking begins.
+
+CODA approaches misinformation as both a linguistic and cognitive problem.
+
+Rather than functioning as a black-box fake news detector, the system identifies visible psychological signals in text and combines them with live verification through global news sources.
+
+---
+
+## System Flow
+
+```mermaid id="39i9k6"
+flowchart TD
+    A[User Input: Link / Headline] --> B[Linguistic Analysis]
+    B --> C[Bias Detection]
+    C --> D[Keyword Extraction]
+    D --> E[Google News Verification]
+    E --> F[Heuristic Risk Scoring]
+    F --> G[Verdict: Safe / Warning / High Risk]
+```
+
+---
 
 ## What CODA does
 
-A user provides a link to an article or online content. Once submitted, CODA processes the textual content and performs linguistic analysis using NLP techniques to examine patterns such as tone, framing, emotional intensity, and manipulative language indicators.
+A user submits a headline, statement, or article link.
 
-Based on this analysis, the system generates an evaluation score that reflects how likely the content is to contain manipulative or misleading language.
+The system then:
 
-Alongside linguistic analysis, CODA also checks whether the same topic or claim appears across multiple news sources, helping users compare information and identify whether the content is supported by broader reporting.
+* performs rule-based linguistic analysis
+* detects urgency cues, sensational expressions, and emotional framing
+* identifies manipulation-oriented language patterns
+* extracts keywords from the content
+* queries multiple global news sources through Google News RSS
+* compares source overlap for informational support
 
-## Core Functions
+Based on this combined evidence, CODA produces:
 
-* Link-based content input
-* NLP-based linguistic analysis
-* Detection of manipulative language patterns
-* Credibility / influence scoring
-* Cross-verification using multiple news sources
+* **Safe** → low manipulation signals + strong source verification
+* **Warning** → moderate indicators or partial verification
+* **High Risk** → strong manipulation signals + weak verification
+
+The output includes both a confidence score and an explanation of detected indicators.
+
+---
 
 ## Why this project was built
 
-CODA was developed as an attempt to explore how language itself can influence perception, especially in online environments where information moves quickly and often without verification.
+Human beings do not process every piece of information through slow rational analysis.
 
-Rather than simply labeling content as true or false, the goal is to help users understand how content is written, how it may affect interpretation, and whether it aligns with information available from other sources.
+Instead, the brain uses cognitive shortcuts — heuristics — to interpret information quickly.
+
+This creates vulnerability.
+
+Words such as *breaking*, *urgent*, *before it disappears*, or strong emotional punctuation influence perception before evidence is examined.
+
+CODA is built around this psychological layer of misinformation.
+
+It does not simply ask whether content is true or false.
+
+It asks:
+
+**Is the language trying to influence reaction before verification happens?**
+
+---
+
+## Detection Logic
+
+| Indicator             | Interpretation                                |
+| --------------------- | --------------------------------------------- |
+| Urgency Words         | Artificial pressure or fear trigger           |
+| Emotional Framing     | Language designed to provoke reaction         |
+| Sensational Tone      | Exaggerated impact language                   |
+| Personal Trigger Cues | Language targeting direct emotional attention |
+| Emoji Intensity       | Attention amplification signals               |
+| Verification Match    | Presence across trusted sources               |
+
+---
+
+## Explainability Layer
+
+A major goal of CODA is transparency.
+
+Many misinformation systems generate predictions without showing why a result was produced.
+
+CODA explains:
+
+* which linguistic features triggered concern
+* how verification influenced confidence
+* why a verdict was assigned
+
+This makes the system interpretable and easier to trust.
+
+---
+
+## Verification Layer
+
+Linguistic analysis alone is not enough.
+
+CODA also performs live verification by querying Google News RSS feeds using extracted keywords.
+
+If multiple trusted sources discuss similar content, credibility increases.
+
+If manipulation signals are strong while verification remains weak, risk increases.
+
+---
 
 ## Tech Stack
 
 * Python
 * Flask
-* NLP modules
-* HTML / CSS
-* Integrated model-based processing
+* HTML
+* CSS
+* JavaScript
+* Regular Expressions
+* Google News RSS Integration
+
+---
 
 ## Project Structure
 
-* `app.py` – main application logic
-* `model/` – scoring / processing models
-* `nlp/` – linguistic analysis components
-* `templates/` – frontend pages
-* `static/` – styles and assets
-* `uploads/` – temporary input handling
+* `app.py` → main backend application
+* `nlp/` → linguistic and bias analysis modules
+* `model/` → heuristic scoring logic
+* `templates/` → frontend interface
+* `static/` → styling and assets
+* `uploads/` → temporary input handling
+
+---
+
+## Future Scope
+
+CODA can evolve into a broader misinformation intelligence framework.
+
+Possible future directions include:
+
+* transformer-based semantic analysis using BERT
+* multilingual misinformation detection
+* image and deepfake verification
+* social media propagation analysis
+* bot activity detection
+* browser-based instant verification support
+* knowledge graph fact validation
+
+---
+
+## Research Background
+
+The project is influenced by explainable AI principles and recent linguistic misinformation research.
+
+Recent studies suggest that linguistic signals significantly improve interpretability in fake news detection systems when combined with machine learning.
+
+CODA adopts this idea by treating language not only as text, but as behavioral evidence.
+
+---
+
+## References
+
+* Google News RSS documentation
+* Flask official documentation
+* Python Regular Expression documentation
+* NIST Explainable AI principles
+* IBM Explainable AI overview
+* Singh, J., Liu, F., Xu, H., Ng, B. C., & Zhang, W. (2024). *LingML: Linguistic-Informed Machine Learning for Enhanced Fake News Detection*
+
+---
+
+## Citation Sources
+
+* https://www.nist.gov/publications/four-principles-explainable-artificial-intelligence
+* https://www.ibm.com/think/topics/explainable-ai
+* https://arxiv.org/abs/2405.04165
+
+---
 
 ## Developed by
 
 Muskaan Hameed
+Paramata Mounish
