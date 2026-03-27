@@ -183,6 +183,6 @@ CODA adopts this idea by treating language not only as text, but as behavioral e
 ---
 
 ## Developed by
-
+Muskaan Hameed and Paramata Mounish
 Muskaan Hameed
 Paramata Mounish
