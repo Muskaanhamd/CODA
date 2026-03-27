@@ -18,7 +18,7 @@ Rather than functioning as a black-box fake news detector, the system identifies
 
 ## System Flow
 
-```mermaid id="39i9k6"
+```mermaid
 flowchart TD
     A[User Input: Link / Headline] --> B[Linguistic Analysis]
     B --> C[Bias Detection]
@@ -182,8 +182,7 @@ CODA adopts this idea by treating language not only as text, but as behavioral e
 
 ---
 
-## Developed by
-Muskaan Hameed
-Paramata Mounish
-Muskaan Hameed
-Paramata Mounish
+## Developers
+
+* Muskaan Hameed
+* Paramata Mounish
